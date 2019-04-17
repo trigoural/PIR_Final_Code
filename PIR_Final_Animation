@@ -1,0 +1,137 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Wed Apr  3 15:00:55 2019
+
+@author: trigoural
+"""
+
+import numpy as np 
+from matplotlib import pyplot as plt
+import matplotlib.animation as animation
+from numpy.random import choice
+
+fig = plt.figure()
+ax = plt.axes(xlim = (0, 2*np.pi), ylim = (-5, 5))
+line, = ax.plot([], [], lw=2)
+
+
+ci = 0+1j
+o= np.linspace(0,2* np.pi, 1000)  
+
+def pir_func( m, o):
+    norm = 1/(np.sqrt(2*np.pi))
+    space = np.exp(ci *m*o)
+    
+    return norm * space
+
+
+def gauss_packet(o, x0, sig, k0):
+    ci = 0+1j 
+    norm = 1/(sig*np.sqrt(2*np.pi))
+    space = np.exp (-0.5* ((o-x0)/sig)**2 )
+    momentum = np.exp(ci * k0* o)
+    return norm * space * momentum
+
+
+h=1
+u=5
+R=2
+
+I= u*(R**2)
+
+def pir_en (m, I):
+    en = ((h**2)*(m**2)/(2*I))
+    return en
+
+def pir_time (m, I, t):
+    time = np.exp((-ci * pir_en(m,I) * t)/(h))    
+    return time
+
+
+def init():
+    line.set_data([], [])
+    return line,
+
+def triangle_wave(xarray):
+    tw= np. zeros (len (xarray))
+    for i in range (0,len(xarray)):
+        xval = xarray [i]
+        if xval<=2:
+            tw[i] = 0
+        elif xval < 3:
+            tw [i] = xval-2
+        elif xval < 4: 
+            tw[i] = -xval + 4
+        else:
+            tw[i] = 0
+    return tw
+
+
+def fourier_analysis (function, xarray, n):
+    
+    psi_n = pir_func(n, xarray)
+    psi_n_star = np.conj (psi_n)
+    w = np.abs(xarray [0] - xarray [1])
+    integrand = psi_n_star * function
+    integral = 0
+    for i in range (0,len(xarray)):
+        A = w * integrand [i] 
+        integral = integral + A
+    return integral
+
+trianglewave = triangle_wave(o)
+
+n_array = np.linspace (-100, 100, 201)
+c_array = np.zeros (len (n_array), dtype = complex)
+b_array = np.zeros(len (n_array), dtype = complex)
+psi_exp = np.zeros (len (trianglewave), dtype = complex)
+
+plt.plot (o, trianglewave, 'red')
+
+for i in range (0, len(n_array)):
+    c_array[i] = fourier_analysis (trianglewave, o, n_array[i])
+    psi_exp = psi_exp + c_array[i] * pir_func (n_array[i], o)
+    
+    
+p_array = np.real (np.conj (c_array) * c_array)
+
+N = np.sum (p_array)
+p_array = p_array / N
+
+
+
+draw = choice (n_array, 1, p=p_array)
+print (draw)
+draw2 = choice (o, 1)
+print (draw2) 
+
+
+x0 = draw2 [0]
+sig = 0.1
+k0 = 0
+
+gp = gauss_packet (o, x0, sig, k0)
+
+for i in range (0, len(n_array)):
+    b_array[i] = fourier_analysis (gp, o, n_array[i])
+    psi_exp = psi_exp + b_array[i] * pir_func (n_array[i], o)
+
+def animate (i):
+    psi_t = np.zeros (len (trianglewave), dtype = complex)
+    if i <100:
+        for j in range (0, len(n_array)):
+            psi_t = psi_t + c_array [j] *pir_func(n_array[j], o) * pir_time (n_array [j], I, i)
+    elif i <200:
+        psi_t = pir_func (int(draw[0]), o) * pir_time(int(draw[0]), I, i)
+    else:
+        for j in range (0, len(n_array)):
+            psi_t = psi_t + b_array [j] *pir_func(n_array[j], o) * pir_time (n_array [j], I, (i-200)/100)
+        
+    line.set_ydata (np.real (psi_t))
+    line.set_xdata (o)
+    return line, 
+
+ani = animation.FuncAnimation (fig, animate, np.arange (1,500), init_func = init, 
+                               interval = 6, blit = True)
+
+  
